@@ -303,8 +303,8 @@
            have a build with an actual number installed, but then build and F5 a build with
            this number.  -->
       <PropertyGroup>
-        <BuildVersion>42.42.42.42</BuildVersion>
-        <AssemblyVersion>42.42.42.42</AssemblyVersion>
+        <BuildVersion>1.1.0.0</BuildVersion>
+        <AssemblyVersion>1.1.0.0</AssemblyVersion>
       </PropertyGroup>
     </Otherwise>
   </Choose>
