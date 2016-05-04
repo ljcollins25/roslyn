@@ -51,6 +51,48 @@
          "Identity" metadata on each of our itemgroups, MSBuild batching will take effect and this task
          will be invoked once for each InternalsVisibleTo item.
     -->
+	<PropertyGroup>
+      <ContractsPublicKey>PublicKey=0024000004800000940000000602000000240000525341310004000001000100779B75DD130E3A349A3A3C3870B37B938BAF1E72EDDBE2C496417BFF17102B2EA28061FBC298ED627D1CC7F536192155AD198DC7FA42B551384E003FA607318A657A4F528C647D0DBE4734D40C576721BA1D6F9FF9FB1C144F38F87FB178872E9F44F7D22439044039FEDE40D7161C5B0A79CAB734637BA06E7DC0E58716B8BF</ContractsPublicKey>
+      <IdePublicKey>PublicKey=0024000004800000940000000602000000240000525341310004000001000100675da410943cdcf89a2bbd3716e451b3c35c0de9278a874e06d143dbc861f7b4d21771131177e413290078b98615421b2bb9ac25c14021c4e2c7b967407b5ea96417317ff8bdb1ef34e0d63f5965bdf92841bdaae505987af712a2e1951b2ff76a16d211e0d5ae2c444f55dbd0a3c0f5bed051af0cf7bae49114c4e0c527c4ed</IdePublicKey>
+    </PropertyGroup>
+    <ItemGroup>
+	  <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>CCRewrite.Application, $(ContractsPublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+	  <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>CodeContractor, $(ContractsPublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+	  <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Contracts.Rewriter, $(ContractsPublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+	  <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.CodeAnalysis.Rewriter, $(ContractsPublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+	  <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>CCRewrite, $(ContractsPublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.Roslyn, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.ProjectSystem, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.ProjectSystem.Cps, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.ProjectSystem.Roslyn, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.LanguageService, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.LanguageService.Cps, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+      <InternalsVisibleToAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+        <_Parameter1>Microsoft.Ide.LanguageService.Roslyn, $(IdePublicKey)</_Parameter1>
+      </InternalsVisibleToAttribute>
+    </ItemGroup>
     <CreateItem Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute"
                 AdditionalMetadata="_Parameter1=%(InternalsVisibleTo.Identity)$(InternalsVisibleToSuffix)"
                 Condition="'@(InternalsVisibleTo)' != ''">
