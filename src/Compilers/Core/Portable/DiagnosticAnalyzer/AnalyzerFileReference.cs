@@ -13,6 +13,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security;
 using System.Threading;
+using Microsoft.CodeAnalysis.Rewriting;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.Diagnostics
@@ -37,6 +38,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private ImmutableDictionary<string, ImmutableArray<DiagnosticAnalyzer>> _lazyAnalyzersPerLanguage;
         private Assembly _lazyAssembly;
         private static readonly string s_diagnosticNamespaceName = string.Format("{0}.{1}.{2}", nameof(Microsoft), nameof(CodeAnalysis), nameof(Diagnostics));
+        private static readonly string s_rewriterNamespaceName = string.Format("{0}.{1}.{2}", nameof(Microsoft), nameof(CodeAnalysis), nameof(Rewriting));
         private ImmutableDictionary<string, ImmutableHashSet<string>> _lazyAnalyzerTypeNameMap;
 
         public event EventHandler<AnalyzerLoadFailureEventArgs> AnalyzerLoadFailed;
@@ -398,7 +400,8 @@ namespace Microsoft.CodeAnalysis.Diagnostics
         private static bool IsDiagnosticAnalyzerAttribute(PEModule peModule, CustomAttributeHandle customAttrHandle)
         {
             EntityHandle ctor;
-            return peModule.IsTargetAttribute(customAttrHandle, s_diagnosticNamespaceName, nameof(DiagnosticAnalyzerAttribute), out ctor);
+            return peModule.IsTargetAttribute(customAttrHandle, s_diagnosticNamespaceName, nameof(DiagnosticAnalyzerAttribute), out ctor) ||
+                peModule.IsTargetAttribute(customAttrHandle, s_rewriterNamespaceName, nameof(CodeRewriterAttribute), out ctor);
         }
 
         private static string GetFullyQualifiedTypeName(TypeDefinition typeDef, PEModule peModule)
