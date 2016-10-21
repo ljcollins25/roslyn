@@ -9,14 +9,14 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 {
-    internal class TrackingSyntaxTree : CSharpSyntaxTree
+    internal class TrackingSyntaxTree : CSharpSyntaxTree, SyntaxTracker.ITrackingSyntaxTree
     {
         private static readonly TrackingRewriter Rewriter = new TrackingRewriter();
         private static readonly TrackingVisitor Visitor = new TrackingVisitor();
 
         private CSharpSyntaxTree _tree;
         private CSharpSyntaxNode _root;
-        private bool _isRewritten = false;
+        public bool IsRewritten { get; }
 
         private TrackingSyntaxTree(
             CSharpSyntaxTree tree,
@@ -25,7 +25,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
             _tree = tree;
             _root = CloneNodeAsRoot(tree.GetRoot());
             var originalRoot = _root.TryGetOriginalNode();
-            _isRewritten = isRewritten;
+            IsRewritten = isRewritten;
         }
 
         public static CSharpSyntaxTree TrackTree(CSharpSyntaxTree tree)
@@ -79,14 +79,14 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 
         public override SyntaxTree WithFilePath(string path)
         {
-            return new TrackingSyntaxTree((CSharpSyntaxTree)_tree.WithFilePath(path), isRewritten: _isRewritten);
+            return new TrackingSyntaxTree((CSharpSyntaxTree)_tree.WithFilePath(path), isRewritten: IsRewritten);
         }
 
         public override SyntaxTree WithRootAndOptions(SyntaxNode root, ParseOptions options)
         {
             return new TrackingSyntaxTree(
                 (CSharpSyntaxTree)_tree.WithRootAndOptions(root, options),
-                isRewritten: _isRewritten || root != _root);
+                isRewritten: IsRewritten || root != _root);
         }
 
         public override FileLinePositionSpan GetMappedLineSpan(TextSpan span, CancellationToken cancellationToken = default(CancellationToken))
@@ -97,7 +97,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 
         public override LineVisibility GetLineVisibility(int position, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (_isRewritten)
+            if (IsRewritten)
             {
                 TextSpan originalSpan;
                 SyntaxTree originalTree;
@@ -117,7 +117,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 
         internal override FileLinePositionSpan GetMappedLineSpanAndVisibility(TextSpan span, out bool isHiddenPosition)
         {
-            if (_isRewritten)
+            if (IsRewritten)
             {
                 TextSpan originalSpan;
                 SyntaxTree originalTree;
@@ -131,7 +131,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 
             var result = _tree.GetMappedLineSpanAndVisibility(span, out isHiddenPosition);
             // For rewritten trees, only lines mapped from the original tree should be visible.
-            isHiddenPosition |= _isRewritten;
+            isHiddenPosition |= IsRewritten;
             return result;
         }
 
@@ -149,7 +149,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
             originalTree = null;
             originalSpan = span;
 
-            if (_isRewritten)
+            if (IsRewritten)
             {
                 var root = _tree.GetRoot(cancellationToken);
                 var token = root.FindToken(span.Start);
@@ -198,7 +198,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Rewriting
 
         private FileLinePositionSpan GetMappedLineSpanAndVisibility(TextSpan span, out bool isHiddenPosition, CancellationToken cancellationToken)
         {
-            if (_isRewritten)
+            if (IsRewritten)
             {
                 isHiddenPosition = true;
                 var root = _tree.GetRoot(cancellationToken);

@@ -14,6 +14,11 @@ namespace Microsoft.CodeAnalysis.Rewriting
     /// </summary>
     public static class SyntaxTracker
     {
+        internal interface ITrackingSyntaxTree
+        {
+            bool IsRewritten { get; }
+        }
+
         private static ConditionalWeakTable<SyntaxAnnotation, SyntaxNode> s_trackedSyntaxNodes
             = new ConditionalWeakTable<SyntaxAnnotation, SyntaxNode>();
         private static ConditionalWeakTable<SyntaxAnnotation, Tuple<SyntaxToken>> s_trackedSyntaxTokens
@@ -34,6 +39,11 @@ namespace Microsoft.CodeAnalysis.Rewriting
 
         //    return result;
         //}
+
+        public static bool IsRewritten(this SyntaxTree tree)
+        {
+            return (tree as ITrackingSyntaxTree)?.IsRewritten ?? false;
+        }
 
         public static T TrackNode<T>(this T node)
             where T : SyntaxNode

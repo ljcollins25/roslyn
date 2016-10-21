@@ -16,6 +16,7 @@ using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.CodeAnalysis.Rewriting;
+using System.Collections.Concurrent;
 
 namespace Microsoft.CodeAnalysis
 {
@@ -423,19 +424,34 @@ namespace Microsoft.CodeAnalysis
                         }
 
                         List<SyntaxTree> trees = new List<SyntaxTree>();
+                        ConcurrentDictionary<string, int> fileMap = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
                         foreach (var tree in compilation.SyntaxTrees)
                         {
-                            var path = tree.FilePath;
-                            var fileName = Path.GetFileName(path);
-                            var generatedFilePath = Path.Combine(@"D:\temp\cscgen", fileName);
-                            trees.Add(tree.WithFilePath(generatedFilePath));
-
-                            var stream = OpenFile(generatedFilePath, consoleOutput, PortableShim.FileMode.Create, PortableShim.FileAccess.Write, PortableShim.FileShare.ReadWriteBitwiseOrDelete);
-                            using (stream)
-                            using (var writer = new StreamWriter(stream))
+                            if (tree.IsRewritten())
                             {
-                                tree.GetText(cancellationToken).Write(writer);
+                                var path = tree.FilePath;
+                                var fileName = Path.GetFileName(path);
+                                var addCount = fileMap.AddOrUpdate(fileName, 0, (k, v) => v + 1);
+
+                                if (addCount != 0)
+                                {
+                                    fileName = $"{Path.GetFileNameWithoutExtension(fileName)}.{addCount}.rg{Path.GetExtension(fileName)}";
+                                }
+
+                                var generatedFilePath = Path.Combine(Arguments.OutputDirectory, fileName);
+                                trees.Add(tree.WithFilePath(generatedFilePath));
+
+                                var stream = OpenFile(generatedFilePath, consoleOutput, PortableShim.FileMode.Create, PortableShim.FileAccess.Write, PortableShim.FileShare.ReadWriteBitwiseOrDelete);
+                                using (stream)
+                                using (var writer = new StreamWriter(stream))
+                                {
+                                    tree.GetText(cancellationToken).Write(writer);
+                                }
+                            }
+                            else
+                            {
+                                trees.Add(tree);
                             }
                         }
 
