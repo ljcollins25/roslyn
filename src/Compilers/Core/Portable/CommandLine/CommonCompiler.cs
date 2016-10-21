@@ -15,6 +15,7 @@ using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.CodeAnalysis.Rewriting;
 
 namespace Microsoft.CodeAnalysis
 {
@@ -87,6 +88,16 @@ namespace Microsoft.CodeAnalysis
         internal string GetCultureName()
         {
             return Culture.Name;
+        }
+
+        internal virtual SyntaxTree ParseTree(
+            TextWriter consoleOutput,
+            TouchedFileLogger touchedFilesLogger,
+            ErrorLogger errorLogger,
+            CommandLineSourceFile sourceFile)
+        {
+            // This is overridden for C# but not for VB.
+            throw new NotImplementedException();
         }
 
         internal virtual Func<string, MetadataReferenceProperties, PortableExecutableReference> GetMetadataProvider()
@@ -352,7 +363,6 @@ namespace Microsoft.CodeAnalysis
                 return Failed;
             }
 
-
             var diagnostics = new List<DiagnosticInfo>();
             var analyzers = ResolveAnalyzersFromArguments(diagnostics, MessageProvider, touchedFilesLogger);
             var additionalTextFiles = ResolveAdditionalFilesFromArguments(diagnostics, MessageProvider, touchedFilesLogger);
@@ -366,10 +376,12 @@ namespace Microsoft.CodeAnalysis
             CancellationTokenSource analyzerCts = null;
             AnalyzerManager analyzerManager = null;
             AnalyzerDriver analyzerDriver = null;
+
             try
             {
                 Func<ImmutableArray<Diagnostic>> getAnalyzerDiagnostics = null;
                 ConcurrentSet<Diagnostic> analyzerExceptionDiagnostics = null;
+
                 if (!analyzers.IsDefaultOrEmpty)
                 {
                     analyzerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -377,6 +389,58 @@ namespace Microsoft.CodeAnalysis
                     analyzerExceptionDiagnostics = new ConcurrentSet<Diagnostic>();
                     Action<Diagnostic> addExceptionDiagnostic = diagnostic => analyzerExceptionDiagnostics.Add(diagnostic);
                     var analyzerOptions = new AnalyzerOptions(ImmutableArray<AdditionalText>.CastUp(additionalTextFiles));
+
+                    var rewriters = analyzers.OfType<CodeRewriter>().ToImmutableArray();
+                    if (!rewriters.IsDefaultOrEmpty)
+                    {
+                        // Print the diagnostics produced during the parsing stage and exit if there were any errors.
+                        if (ReportErrors(compilation.GetParseDiagnostics(), consoleOutput, errorLogger))
+                        {
+                            return Failed;
+                        }
+
+                        ParseFunction parseFunction = (string filePath, bool isScript) =>
+                        {
+                            return ParseTree(consoleOutput, touchedFilesLogger, errorLogger, new CommandLineSourceFile(filePath, isScript));
+                        };
+
+                        RewriterContext rewriterContext = new RewriterContext(analyzerOptions, cancellationToken);
+
+                        foreach (var rewriter in rewriters)
+                        {
+                            rewriter.Initialize(rewriterContext);
+                        }
+
+                        foreach (var rewrite in rewriterContext.RegisteredRewrites)
+                        {
+                            var compilationRewriteContext = new CompilationRewriteContext(
+                                compilation,
+                                analyzerOptions,
+                                parseFunction,
+                                cancellationToken);
+
+                            compilation = rewrite(compilationRewriteContext);
+                        }
+
+                        List<SyntaxTree> trees = new List<SyntaxTree>();
+
+                        foreach (var tree in compilation.SyntaxTrees)
+                        {
+                            var path = tree.FilePath;
+                            var fileName = Path.GetFileName(path);
+                            var generatedFilePath = Path.Combine(@"D:\temp\cscgen", fileName);
+                            trees.Add(tree.WithFilePath(generatedFilePath));
+
+                            var stream = OpenFile(generatedFilePath, consoleOutput, PortableShim.FileMode.Create, PortableShim.FileAccess.Write, PortableShim.FileShare.ReadWriteBitwiseOrDelete);
+                            using (stream)
+                            using (var writer = new StreamWriter(stream))
+                            {
+                                tree.GetText(cancellationToken).Write(writer);
+                            }
+                        }
+
+                        compilation = compilation.RemoveAllSyntaxTrees().AddSyntaxTrees(trees);
+                    }
 
                     analyzerDriver = AnalyzerDriver.CreateAndAttachToCompilation(compilation, analyzers, analyzerOptions, analyzerManager, addExceptionDiagnostic, Arguments.ReportAnalyzer, out compilation, analyzerCts.Token);
                     getAnalyzerDiagnostics = () => analyzerDriver.GetDiagnosticsAsync(compilation).Result;

@@ -30,6 +30,24 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override DiagnosticFormatter DiagnosticFormatter { get { return _diagnosticFormatter; } }
         protected internal new CSharpCommandLineArguments Arguments { get { return (CSharpCommandLineArguments)base.Arguments; } }
 
+        internal override SyntaxTree ParseTree(
+            TextWriter consoleOutput, 
+            TouchedFileLogger touchedFilesLogger, 
+            ErrorLogger errorLogger,
+            CommandLineSourceFile sourceFile)
+        {
+            var parseOptions = Arguments.ParseOptions;
+
+            // We compute script parse options once so we don't have to do it repeatedly in
+            // case there are many script files.
+            var scriptParseOptions = parseOptions.WithKind(SourceCodeKind.Script);
+
+            bool hadErrors = false;
+            string normalizedFilePath;
+
+            return ParseFile(consoleOutput, parseOptions, scriptParseOptions, ref hadErrors, sourceFile, errorLogger, out normalizedFilePath);
+        }
+
         public override Compilation CreateCompilation(TextWriter consoleOutput, TouchedFileLogger touchedFilesLogger, ErrorLogger errorLogger)
         {
             var parseOptions = Arguments.ParseOptions;
@@ -183,6 +201,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             // where things run sequentially.
             bool isHiddenDummy;
             tree.GetMappedLineSpanAndVisibility(default(TextSpan), out isHiddenDummy);
+
+            tree = Rewriting.TrackingSyntaxTree.TrackTree((CSharpSyntaxTree)tree);
 
             return tree;
         }

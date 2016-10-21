@@ -476,6 +476,7 @@
     <Compile Include="Parser\SyntaxListPool.cs" />
     <Compile Include="Parser\SyntaxParser.cs" />
     <Compile Include="Parser\SyntaxParser.ResetPoint.cs" />
+    <Compile Include="Rewriting\TrackingSyntaxTree.cs" />
     <Compile Include="SymbolDisplay\ObjectDisplay.cs" />
     <Compile Include="SymbolDisplay\SymbolDisplay.cs" />
     <Compile Include="SymbolDisplay\SymbolDisplayVisitor.cs" />
