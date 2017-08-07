@@ -67,6 +67,9 @@
     <Compile Include="CaseInsensitiveComparison.cs" />
     <Compile Include="CodeGen\DynamicAnalysisMethodBodyData.cs" />
     <Compile Include="CodeGen\ILEmitStyle.cs" />
+    <Compile Include="Rewriting\CodeRewriter.cs" />
+    <Compile Include="Rewriting\CodeRewriterAttribute.cs" />
+    <Compile Include="Rewriting\SyntaxTracker.cs" />
     <Compile Include="DiagnosticAnalyzer\AnalysisResult.cs" />
     <Compile Include="DiagnosticAnalyzer\AnalyzerAssemblyLoader.cs" />
     <Compile Include="FileSystem\CompilerPathUtilities.cs" />

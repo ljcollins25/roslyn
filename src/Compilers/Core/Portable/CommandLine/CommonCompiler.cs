@@ -15,6 +15,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
+using Microsoft.CodeAnalysis.Rewriting;
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 namespace Microsoft.CodeAnalysis
@@ -169,6 +171,16 @@ namespace Microsoft.CodeAnalysis
         internal string GetCultureName()
         {
             return Culture.Name;
+        }
+
+        internal virtual SyntaxTree ParseTree(
+            TextWriter consoleOutput,
+            TouchedFileLogger touchedFilesLogger,
+            ErrorLogger errorLogger,
+            CommandLineSourceFile sourceFile)
+        {
+            // This is overridden for C# but not for VB.
+            throw new NotImplementedException();
         }
 
         internal virtual Func<string, MetadataReferenceProperties, PortableExecutableReference> GetMetadataProvider()
@@ -584,6 +596,66 @@ namespace Microsoft.CodeAnalysis
                     analyzerExceptionDiagnostics = new ConcurrentSet<Diagnostic>();
                     Action<Diagnostic> addExceptionDiagnostic = diagnostic => analyzerExceptionDiagnostics.Add(diagnostic);
                     var analyzerOptions = new AnalyzerOptions(ImmutableArray<AdditionalText>.CastUp(additionalTextFiles));
+
+                    var rewriters = analyzers.OfType<CodeRewriter>().ToImmutableArray();
+                    if (!rewriters.IsEmpty)
+                    {
+                        // Print the diagnostics produced during the parsing stage and exit if there were any errors.
+                        if (ReportErrors(compilation.GetParseDiagnostics(), consoleOutput, errorLogger))
+                        {
+                            return Failed;
+                        }
+
+                        ParseFunction parseFunction = (string filePath, bool isScript) =>
+                        {
+                            return ParseTree(consoleOutput, touchedFilesLogger, errorLogger, new CommandLineSourceFile(filePath, isScript));
+                        };
+
+                        RewriterContext rewriterContext = new RewriterContext(analyzerOptions, cancellationToken);
+
+                        foreach (var rewriter in rewriters)
+                        {
+                            rewriter.Initialize(rewriterContext);
+                        }
+
+                        foreach (var rewrite in rewriterContext.RegisteredRewrites)
+                        {
+                            var compilationRewriteContext = new CompilationRewriteContext(
+                                compilation,
+                                analyzerOptions,
+                                parseFunction,
+                                cancellationToken);
+
+                            compilation = rewrite(compilationRewriteContext);
+                        }
+
+                        List<SyntaxTree> trees = new List<SyntaxTree>();
+                        ConcurrentDictionary<string, int> fileMap = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+                        foreach (var tree in compilation.SyntaxTrees)
+                        {
+                            var path = tree.FilePath;
+                            var fileName = Path.GetFileName(path);
+                            var addCount = fileMap.AddOrUpdate(fileName, 0, (k, v) => v + 1);
+
+                            if (addCount != 0)
+                            {
+                                fileName = $"{Path.GetFileNameWithoutExtension(fileName)}.{addCount}.rg{Path.GetExtension(fileName)}";
+                            }
+
+                            var generatedFilePath = Path.Combine(@"D:\temp", Arguments.OutputFileName + "." + fileName);
+                            trees.Add(tree.WithFilePath(generatedFilePath));
+
+                            var stream = OpenFile(generatedFilePath, consoleOutput, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+                            using (stream)
+                            using (var writer = new StreamWriter(stream))
+                            {
+                                tree.GetText(cancellationToken).Write(writer);
+                            }
+                        }
+
+                        compilation = compilation.RemoveAllSyntaxTrees().AddSyntaxTrees(trees);
+                    }
 
                     analyzerDriver = AnalyzerDriver.CreateAndAttachToCompilation(compilation, analyzers, analyzerOptions, analyzerManager, addExceptionDiagnostic, Arguments.ReportAnalyzer, out compilation, analyzerCts.Token);
                     reportAnalyzer = Arguments.ReportAnalyzer && !analyzers.IsEmpty;

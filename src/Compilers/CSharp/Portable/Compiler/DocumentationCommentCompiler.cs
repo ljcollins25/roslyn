@@ -806,6 +806,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 int newLineLength;
                 int end = IndexOfNewLine(text, start, out newLineLength);
                 int trimStart = GetIndexOfFirstNonWhitespaceChar(text, start, end) + substringStart;
+                if (trimStart >= text.Length || end > text.Length)
+                {
+                    break;
+                }
+
                 WriteSubStringLine(text, trimStart, end - trimStart);
                 start = end + newLineLength;
             }

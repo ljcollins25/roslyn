@@ -13,7 +13,12 @@ namespace Microsoft.CodeAnalysis.CSharp.CommandLine
             => Main(args, Array.Empty<string>());
 
         public static int Main(string[] args, string[] extraArgs)
-            => DesktopBuildClient.Run(args, extraArgs, RequestLanguage.CSharpCompile, Csc.Run, new DesktopAnalyzerAssemblyLoader());
+        {
+            Console.WriteLine("Command line:");
+            Console.WriteLine(Environment.CommandLine);
+            Console.WriteLine();
+            return DesktopBuildClient.Run(args, extraArgs, RequestLanguage.CSharpCompile, Csc.Run, new DesktopAnalyzerAssemblyLoader());
+        }
 
         public static int Run(string[] args, string clientDir, string workingDir, string sdkDir, string tempDir, TextWriter textWriter, IAnalyzerAssemblyLoader analyzerLoader)
             => Csc.Run(args, new BuildPaths(clientDir: clientDir, workingDir: workingDir, sdkDir: sdkDir, tempDir: tempDir), textWriter, analyzerLoader);

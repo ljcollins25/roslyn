@@ -394,6 +394,11 @@ namespace Microsoft.CodeAnalysis.Semantics
             Visit(operation.Instance);
         }
 
+        public override void VisitDelegateCreationExpression(IDelegateCreationExpression operation)
+        {
+            Visit(operation.Argument);
+        }
+
         public override void VisitUnboundLambdaExpression(IUnboundLambdaExpression operation)
         { }
 

@@ -1133,6 +1133,21 @@ namespace Microsoft.CodeAnalysis.Semantics
     }
 
     /// <summary>
+    /// Represents a new/New delegate expression.
+    /// </summary>
+    /// <remarks>
+    /// This interface is reserved for implementation by its associated APIs. We reserve the right to
+    /// change it in the future.
+    /// </remarks>
+    public interface IDelegateCreationExpression : IOperation
+    {
+        /// <summary>
+        /// The argument of the creation expression
+        /// </summary>
+        IOperation Argument { get; }
+    }
+
+    /// <summary>
     /// Represents a new/New expression.
     /// </summary>
     /// <remarks>
